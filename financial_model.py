@@ -363,6 +363,154 @@ def calculate_shareholder_returns(model_data, exit_data, params):
 # OUTPUT
 # ============================================================================
 
+def generate_timeline_html(model_data, params):
+    """Generate horizontal timeline view (years as columns)."""
+    years = sorted(model_data.keys())
+
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Financial Model — Timeline View</title>
+        <style>
+            body { font-family: 'Courier New', monospace; margin: 20px; background-color: #f5f5f5; }
+            h1 { color: #333; }
+            .container { max-width: 2000px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 5px; }
+            table { border-collapse: collapse; margin: 20px 0; background-color: white; overflow-x: auto; }
+            th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: right; font-size: 0.9em; }
+            th { background-color: #4CAF50; color: white; min-width: 120px; }
+            td.label { text-align: left; font-weight: bold; background-color: #f9f9f9; min-width: 180px; }
+            .positive { color: green; font-weight: bold; }
+            .negative { color: red; font-weight: bold; }
+            .header { background-color: #4CAF50; color: white; font-weight: bold; }
+            .section { margin-top: 30px; }
+            .scroll-hint { color: #999; font-size: 0.9em; margin-bottom: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Financial Model — Timeline View (Horizontal)</h1>
+            <p class="scroll-hint">💡 Scroll right to see all years side-by-side</p>
+    """
+
+    # Deployments & Asset Returns
+    html += """
+    <div class="section">
+    <h2>Capital Flows</h2>
+    <table>
+        <tr class="header">
+            <th>Metric</th>
+    """
+    for year in years:
+        html += f"<th>Year {year}</th>"
+    html += "</tr>"
+
+    # Row: New Deployment
+    html += "<tr><td class='label'>New Deployment</td>"
+    for year in years:
+        val = model_data[year]['new_deployment']
+        html += f"<td class='number'>${val/1e6:.1f}M</td>"
+    html += "</tr>"
+
+    # Row: Asset Returns
+    html += "<tr><td class='label'>Asset Returns (Gross)</td>"
+    for year in years:
+        val = model_data[year]['asset_returns_gross']
+        css = 'positive' if val > 0 else ''
+        html += f"<td class='{css}'>${val/1e6:.1f}M</td>"
+    html += "</tr>"
+
+    html += "</table>"
+
+    # Fees & Interest
+    html += """
+    <h2>Fees & Servicing</h2>
+    <table>
+        <tr class="header">
+            <th>Metric</th>
+    """
+    for year in years:
+        html += f"<th>Year {year}</th>"
+    html += "</tr>"
+
+    # Row: Mgmt Fee
+    html += "<tr><td class='label'>Management Fee (2% AUM)</td>"
+    for year in years:
+        val = model_data[year]['mgmt_fee']
+        html += f"<td class='negative'>${val/1e6:.1f}M</td>"
+    html += "</tr>"
+
+    # Row: Debt Interest
+    html += "<tr><td class='label'>Debt Interest</td>"
+    for year in years:
+        val = model_data[year]['debt_interest']
+        css = 'negative' if val > 0 else ''
+        html += f"<td class='{css}'>${val/1e6:.1f}M</td>"
+    html += "</tr>"
+
+    # Row: Debt Drawn
+    html += "<tr><td class='label'>Debt Drawn</td>"
+    for year in years:
+        val = model_data[year]['debt_drawn']
+        css = 'positive' if val > 0 else ''
+        html += f"<td class='{css}'>${val/1e6:.1f}M</td>"
+    html += "</tr>"
+
+    html += "</table>"
+
+    # Cashflow & Reinvestment
+    html += """
+    <h2>Reinvestment & Distribution</h2>
+    <table>
+        <tr class="header">
+            <th>Metric</th>
+    """
+    for year in years:
+        html += f"<th>Year {year}</th>"
+    html += "</tr>"
+
+    # Row: Available Cash
+    html += "<tr><td class='label'>Available Cash (after fees)</td>"
+    for year in years:
+        val = model_data[year]['available_cash']
+        css = 'positive' if val > 0 else 'negative'
+        html += f"<td class='{css}'>${val/1e6:.1f}M</td>"
+    html += "</tr>"
+
+    # Row: Reinvestment
+    html += "<tr><td class='label'>Reinvested ({:.0f}%)".format(model_data[0].get('reinvestment_pct', 50) * 100)
+    html += "</td>"
+    for year in years:
+        val = model_data[year]['reinvestment_amount']
+        css = 'positive' if val > 0 else ''
+        html += f"<td class='{css}'>${val/1e6:.1f}M</td>"
+    html += "</tr>"
+
+    # Row: Distribution
+    html += "<tr><td class='label'>Cash Distribution</td>"
+    for year in years:
+        val = model_data[year]['cash_distributions']
+        css = 'positive' if val > 0 else ''
+        html += f"<td class='{css}'>${val/1e6:.1f}M</td>"
+    html += "</tr>"
+
+    # Row: Cumulative AUM
+    html += "<tr><td class='label'><strong>Cumulative AUM</strong></td>"
+    for year in years:
+        val = model_data[year]['cumulative_aum']
+        html += f"<td><strong>${val/1e6:.0f}M</strong></td>"
+    html += "</tr>"
+
+    html += """
+    </table>
+    </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+
 def generate_html_output(model_data, assets, exit_data, shareholder_returns, irr_data, params):
     """Generate HTML output of the financial model."""
 
@@ -702,6 +850,12 @@ if __name__ == "__main__":
     output_base = Path("/Users/andrewgoodwin/financial_model.html")
     output_base.write_text(html_base)
     print(f"✓ Base model generated: {output_base}")
+
+    # Generate timeline view
+    html_timeline = generate_timeline_html(model_data_base, params_base)
+    output_timeline = Path("/Users/andrewgoodwin/financial_model_timeline.html")
+    output_timeline.write_text(html_timeline)
+    print(f"✓ Timeline view generated: {output_timeline}")
 
     # OPTIMIZED CASE
     params_opt = ModelParams()
