@@ -10,6 +10,9 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 from scipy.optimize import newton
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 # ============================================================================
 # PARAMETERS - ALL ADJUSTABLE
@@ -837,6 +840,159 @@ def generate_comparison_html(base_case, optimized_case, base_params, opt_params)
     return html
 
 
+def export_to_excel(model_data_base, shareholder_base, irr_base, params_base,
+                     model_data_opt, shareholder_opt, irr_opt, params_opt,
+                     sensitivity_results):
+    """Export financial model to Excel workbook."""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Base Case"
+
+    # Style definitions
+    header_fill = PatternFill(start_color="4CAF50", end_color="4CAF50", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    number_format = "#,##0"
+    currency_format = '$#,##0'
+    pct_format = '0.0%'
+
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # Sheet 1: Base Case Year-by-Year
+    years = sorted(model_data_base.keys())
+
+    # Headers
+    ws['A1'] = "Base Case — Year-by-Year Cashflow Model"
+    ws['A1'].font = Font(bold=True, size=14)
+    ws.merge_cells('A1:J1')
+
+    row = 3
+    headers = ['Year', 'New Deployment', 'Asset Returns', 'Debt Drawn', 'Mgmt Fee',
+               'Debt Interest', 'Available Cash', 'Reinvestment', 'Distribution', 'Cumulative AUM']
+
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=row, column=col)
+        cell.value = header
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center')
+
+    row = 4
+    for year in years:
+        data = model_data_base[year]
+        row_data = [
+            year,
+            data['new_deployment'],
+            data['asset_returns_gross'],
+            data['debt_drawn'],
+            data['mgmt_fee'],
+            data['debt_interest'],
+            data['available_cash'],
+            data['reinvestment_amount'],
+            data['cash_distributions'],
+            data['cumulative_aum']
+        ]
+
+        for col, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row, column=col)
+            cell.value = value
+            if col == 1:
+                cell.alignment = Alignment(horizontal='center')
+            else:
+                cell.number_format = currency_format
+                cell.alignment = Alignment(horizontal='right')
+            cell.border = thin_border
+        row += 1
+
+    # Adjust column widths
+    ws.column_dimensions['A'].width = 12
+    for col in ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
+        ws.column_dimensions[col].width = 16
+
+    # Sheet 2: Summary
+    ws_summary = wb.create_sheet("Summary")
+
+    ws_summary['A1'] = "Financial Model Summary"
+    ws_summary['A1'].font = Font(bold=True, size=14)
+
+    row = 3
+    ws_summary[f'A{row}'] = "Base Case"
+    ws_summary[f'A{row}'].font = Font(bold=True, size=12)
+
+    row = 4
+    summary_data = [
+        ('Investor IRR', irr_base['investor_irr'], pct_format),
+        ('Cumulative AUM', sum([model_data_base[y]['cumulative_aum'] for y in years]) / len(years), currency_format),
+        ('Cumulative Fee Income', shareholder_base['cumulative_fee_income'], currency_format),
+        ('Exit Upside Income', shareholder_base['exit_upside_income'], currency_format),
+        ('Total Cash to Shareholder', shareholder_base['total_cash_to_shareholder'], currency_format),
+    ]
+
+    for label, value, fmt in summary_data:
+        ws_summary[f'A{row}'] = label
+        ws_summary[f'B{row}'] = value
+        ws_summary[f'B{row}'].number_format = fmt
+        ws_summary[f'A{row}'].font = Font(bold=True)
+        row += 1
+
+    row += 1
+    ws_summary[f'A{row}'] = "Optimized Case"
+    ws_summary[f'A{row}'].font = Font(bold=True, size=12, color="00AA00")
+
+    row += 1
+    summary_opt_data = [
+        ('Investor IRR', irr_opt['investor_irr'], pct_format),
+        ('Total Cash to Shareholder', shareholder_opt['total_cash_to_shareholder'], currency_format),
+    ]
+
+    for label, value, fmt in summary_opt_data:
+        ws_summary[f'A{row}'] = label
+        ws_summary[f'B{row}'] = value
+        ws_summary[f'B{row}'].number_format = fmt
+        ws_summary[f'A{row}'].font = Font(bold=True)
+        row += 1
+
+    ws_summary.column_dimensions['A'].width = 30
+    ws_summary.column_dimensions['B'].width = 20
+
+    # Sheet 3: Sensitivity
+    ws_sens = wb.create_sheet("Sensitivity")
+
+    ws_sens['A1'] = "IRR Sensitivity Analysis"
+    ws_sens['A1'].font = Font(bold=True, size=14)
+    ws_sens.merge_cells('A1:C1')
+
+    row = 3
+
+    # Exit Multiple Sensitivity
+    ws_sens[f'A{row}'] = "Exit Multiple"
+    ws_sens[f'A{row}'].font = Font(bold=True, color="FFFFFF")
+    ws_sens[f'A{row}'].fill = header_fill
+    ws_sens[f'B{row}'] = "Investor IRR"
+    ws_sens[f'B{row}'].font = Font(bold=True, color="FFFFFF")
+    ws_sens[f'B{row}'].fill = header_fill
+    row += 1
+
+    for multiple in sorted(sensitivity_results['exit_multiple'].keys()):
+        ws_sens[f'A{row}'] = f"{multiple}x"
+        ws_sens[f'B{row}'] = sensitivity_results['exit_multiple'][multiple] / 100
+        ws_sens[f'B{row}'].number_format = pct_format
+        row += 1
+
+    ws_sens.column_dimensions['A'].width = 15
+    ws_sens.column_dimensions['B'].width = 15
+
+    # Save workbook
+    output_path = Path("/Users/andrewgoodwin/financial_model.xlsx")
+    wb.save(output_path)
+    return output_path
+
+
 if __name__ == "__main__":
     # BASE CASE
     params_base = ModelParams()
@@ -905,6 +1061,12 @@ if __name__ == "__main__":
     sensitivity_path = Path("/Users/andrewgoodwin/financial_model_sensitivity.html")
     sensitivity_path.write_text(sensitivity_html)
     print(f"✓ Sensitivity analysis generated: {sensitivity_path}")
+
+    # Export to Excel
+    excel_path = export_to_excel(model_data_base, shareholder_base, irr_base, params_base,
+                                  model_data_opt, shareholder_opt, irr_opt, params_opt,
+                                  sensitivity_results)
+    print(f"✓ Excel export generated: {excel_path}")
 
     print(f"\n📈 Summary:")
     print(f"\n  BASE CASE:")
