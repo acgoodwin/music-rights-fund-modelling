@@ -358,7 +358,12 @@ def generate_dashboard():
 
                     <div class="results">
                         <div class="result-row">
-                            <span class="result-label">Investor IRR:</span>
+                            <span class="result-label">
+                                Investor Return:
+                                <span style="font-size: 0.85em; color: #666;">
+                                    <button style="padding: 2px 8px; font-size: 0.8em; margin-left: 10px;" id="mode_btn" onclick="toggleIRRMode()">Mode: Annualized</button>
+                                </span>
+                            </span>
                             <span class="result-value" id="irr_result">101.0%</span>
                         </div>
                         <div class="result-row">
@@ -418,6 +423,15 @@ def generate_dashboard():
         </div>
 
         <script>
+            // IRR Mode toggle
+            let irrMode = 'annualized'; // 'annualized' or 'cumulative'
+
+            function toggleIRRMode() {
+                irrMode = irrMode === 'annualized' ? 'cumulative' : 'annualized';
+                document.getElementById('mode_btn').textContent = 'Mode: ' + (irrMode === 'annualized' ? 'Annualized (CAGR)' : 'Cumulative Return');
+                calculateModel();
+            }
+
             // Simple financial model calculation in JavaScript
             function calculateModel() {
                 // Get parameter values
@@ -459,11 +473,20 @@ def generate_dashboard():
                 // Upside (simplified)
                 const upside = netProceeds * mgmtUpside * 0.0293; // 2.93% to shareholder
 
-                // Simplified IRR calculation (approximate)
-                const cashIn = mgmtFeeIncome + upside;
-                const cashOut = 0;
-                const approxIRR = Math.pow(cashIn / totalEquity, 1/holdPeriod) - 1;
-                const irrPercent = approxIRR * 100;
+                // IRR calculation (annualized CAGR)
+                const totalCashReturned = mgmtFeeIncome + upside;
+                const totalMultiple = totalCashReturned / totalEquity;
+
+                // Calculate IRR based on selected mode
+                let irrPercent;
+                if (irrMode === 'cumulative') {
+                    // Total return (simple multiple)
+                    irrPercent = (totalMultiple - 1) * 100;
+                } else {
+                    // Annualized return (CAGR)
+                    const annualizedReturn = Math.pow(totalMultiple, 1/holdPeriod) - 1;
+                    irrPercent = annualizedReturn * 100;
+                }
 
                 // Update displays
                 document.getElementById('irr_result').textContent = irrPercent.toFixed(1) + '%';
