@@ -265,60 +265,93 @@ def calculate_exit_value(model_data, assets, params, cumulative_deployed, cumula
 
 
 def calculate_irr(model_data, exit_data, params):
-    """Calculate IRR for investor."""
+    """Calculate IRR for investor on $150M equity deployed.
+
+    IRR is the annualized return on equity capital only (not including debt).
+    Debt is leverage that amplifies equity returns but target applies to equity IRR.
+    """
     years = sorted(model_data.keys())
 
-    # Build investor cashflows from perspective of equity investor (80% investor portion)
+    # Build investor (80%) equity cashflows
     investor_cashflows = []
+    total_equity_deployed = params.total_equity
 
     for year in years:
         data = model_data[year]
 
-        # Investor invests the new deployment (80% of new equity)
-        equity_invested = data['new_deployment']
+        # Equity deployment (80% investor gets all equity returns, mgmt gets 20% of upside only)
+        equity_deployed = data['new_deployment']
 
-        # Investor receives asset returns minus fees (mgmt fee goes to mgmt co)
+        # Investor receives:
+        # 1. Asset returns (net of mgmt fee which goes to mgmt co)
+        # 2. Minus debt servicing (interest + principal)
         asset_returns = data['asset_returns_gross']
         mgmt_fee = data['mgmt_fee']
         debt_interest = data['debt_interest']
         debt_principal = data['debt_principal_paid']
 
-        # Investor's net cashflow = returns - fees - debt service
-        investor_flow = asset_returns - mgmt_fee - debt_interest - debt_principal
+        # Net cashflow to investor (distributions)
+        investor_distributions = asset_returns - mgmt_fee - debt_interest - debt_principal
 
-        # If year 0, subtract initial investment
+        # Total cashflow = new equity deployed (outflow) + distributions (inflow)
+        cashflow = investor_distributions
         if year == 0:
-            investor_flow -= equity_invested
+            # Year 0: deploy equity
+            cashflow -= equity_deployed
 
-        # At exit year, add exit proceeds (80% to investor, 20% to mgmt co)
+        # At exit year: add proceeds (80% of net exit to investor, 20% to mgmt co upside)
         if year == exit_data['exit_year']:
             exit_proceeds_to_investor = exit_data['net_proceeds'] * 0.80
-            investor_flow += exit_proceeds_to_investor
+            cashflow += exit_proceeds_to_investor
 
-        investor_cashflows.append(investor_flow)
+        investor_cashflows.append(cashflow)
 
     # Calculate IRR using NPV approach
     def npv(rate, cashflows):
+        """Net Present Value at given discount rate."""
         return sum(cf / ((1 + rate) ** i) for i, cf in enumerate(cashflows))
 
-    def calculate_rate(cashflows):
+    def calculate_irr(cashflows):
+        """Calculate IRR (annualized) and cumulative return."""
         try:
-            # Try multiple initial guesses for robustness
+            # Find IRR using Newton's method
             for guess in [0.05, 0.10, 0.15, 0.20, 0.30]:
                 try:
                     rate = newton(lambda r: npv(r, cashflows), guess, maxiter=100)
                     if -0.5 < rate < 2.0:  # Sanity check: -50% to 200%
-                        return rate * 100
+                        irr_annualized = rate * 100
+
+                        # Calculate cumulative return
+                        total_outflows = sum(cf for cf in cashflows if cf < 0)
+                        total_inflows = sum(cf for cf in cashflows if cf > 0)
+                        cumulative_multiple = total_inflows / abs(total_outflows) if total_outflows != 0 else 0
+
+                        return {
+                            'irr_annualized': irr_annualized,
+                            'total_multiple': cumulative_multiple,
+                            'total_return_pct': (cumulative_multiple - 1) * 100,
+                        }
                 except:
                     continue
-            return 0
+            return {
+                'irr_annualized': 0,
+                'total_multiple': 1.0,
+                'total_return_pct': 0,
+            }
         except:
-            return 0
+            return {
+                'irr_annualized': 0,
+                'total_multiple': 1.0,
+                'total_return_pct': 0,
+            }
 
-    investor_irr = calculate_rate(investor_cashflows)
+    result = calculate_irr(investor_cashflows)
 
     return {
-        'investor_irr': investor_irr,
+        'investor_irr': result['irr_annualized'],
+        'investor_irr_annualized': result['irr_annualized'],
+        'investor_multiple': result['total_multiple'],
+        'investor_total_return': result['total_return_pct'],
         'investor_cashflows': investor_cashflows,
     }
 
