@@ -369,6 +369,7 @@ def calculate_shareholder_returns(model_data, exit_data, params):
 def generate_timeline_html(model_data, params):
     """Generate horizontal timeline view (years as columns)."""
     years = sorted(model_data.keys())
+    nav_tabs = generate_nav_tabs('financial_model_timeline.html')
 
     html = """
     <!DOCTYPE html>
@@ -392,6 +393,7 @@ def generate_timeline_html(model_data, params):
     </head>
     <body>
         <div class="container">
+            """ + nav_tabs + """
             <h1>Financial Model — Timeline View (Horizontal)</h1>
             <p style="margin-bottom: 15px;">
                 <a href="financial_model.xlsx" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
@@ -519,6 +521,53 @@ def generate_timeline_html(model_data, params):
     return html
 
 
+def generate_nav_tabs(current_page):
+    """Generate navigation tabs for all pages."""
+    tabs = [
+        ('financial_model.html', 'Base Case'),
+        ('financial_model_timeline.html', 'Timeline'),
+        ('financial_model_optimized.html', 'Optimized'),
+        ('financial_model_comparison.html', 'Comparison'),
+        ('financial_model_sensitivity.html', 'Sensitivity'),
+    ]
+
+    nav_html = """
+    <style>
+        .nav-tabs {
+            display: flex;
+            border-bottom: 2px solid #4CAF50;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+        .nav-tab {
+            padding: 12px 20px;
+            text-decoration: none;
+            color: #333;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .nav-tab:hover {
+            background-color: #f0f0f0;
+            color: #4CAF50;
+        }
+        .nav-tab.active {
+            color: #4CAF50;
+            border-bottom: 3px solid #4CAF50;
+        }
+    </style>
+    <div class="nav-tabs">
+    """
+
+    for page_url, page_name in tabs:
+        active_class = 'active' if current_page == page_url else ''
+        nav_html += f'<a href="{page_url}" class="nav-tab {active_class}">{page_name}</a>'
+
+    nav_html += '</div>'
+    return nav_html
+
+
 def generate_html_output(model_data, assets, exit_data, shareholder_returns, irr_data, params):
     """Generate HTML output of the financial model."""
 
@@ -555,6 +604,8 @@ def generate_html_output(model_data, assets, exit_data, shareholder_returns, irr
     shareholder_pct = shareholder_returns['shareholder_pct_of_mgmt'] * 100
     upside_pct = shareholder_returns['shareholder_upside_pct'] * 100
 
+    nav_tabs = generate_nav_tabs('financial_model.html')
+
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -575,6 +626,7 @@ def generate_html_output(model_data, assets, exit_data, shareholder_returns, irr
     </head>
     <body>
         <div class="container">
+            {nav_tabs}
             <h1>Music Royalty Fund Financial Model</h1>
             <p>Generated: {timestamp}</p>
             <p style="margin-top: 15px;">
@@ -698,6 +750,7 @@ def run_sensitivity_analysis(base_params):
 
 def generate_sensitivity_html(sensitivity_results):
     """Generate HTML sensitivity table."""
+    nav_tabs = generate_nav_tabs('financial_model_sensitivity.html')
     html = """
     <!DOCTYPE html>
     <html>
@@ -718,6 +771,7 @@ def generate_sensitivity_html(sensitivity_results):
     </head>
     <body>
         <div class="container">
+            """ + nav_tabs + """
             <h1>IRR Sensitivity Analysis — Key Levers</h1>
             <p style="margin-bottom: 15px;">
                 <a href="financial_model.xlsx" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
@@ -787,6 +841,7 @@ def generate_sensitivity_html(sensitivity_results):
 
 def generate_comparison_html(base_case, optimized_case, base_params, opt_params):
     """Generate HTML comparing base case vs optimized case."""
+    nav_tabs = generate_nav_tabs('financial_model_comparison.html')
     html = f"""
     <!DOCTYPE html>
     <html>
@@ -809,6 +864,7 @@ def generate_comparison_html(base_case, optimized_case, base_params, opt_params)
     </head>
     <body>
         <div class="container">
+            {nav_tabs}
             <h1>Base Case vs Optimized Scenario</h1>
             <p style="margin-bottom: 20px;">
                 <a href="financial_model.xlsx" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
