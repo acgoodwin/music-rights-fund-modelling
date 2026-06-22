@@ -393,6 +393,11 @@ def generate_timeline_html(model_data, params):
     <body>
         <div class="container">
             <h1>Financial Model — Timeline View (Horizontal)</h1>
+            <p style="margin-bottom: 15px;">
+                <a href="financial_model.xlsx" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    ⬇️ Download Excel
+                </a>
+            </p>
             <p class="scroll-hint">💡 Scroll right to see all years side-by-side</p>
     """
 
@@ -572,6 +577,11 @@ def generate_html_output(model_data, assets, exit_data, shareholder_returns, irr
         <div class="container">
             <h1>Music Royalty Fund Financial Model</h1>
             <p>Generated: {timestamp}</p>
+            <p style="margin-top: 15px;">
+                <a href="financial_model.xlsx" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    ⬇️ Download Excel
+                </a>
+            </p>
 
             <h2>Model Parameters</h2>
             <div class="param-box">
@@ -709,6 +719,11 @@ def generate_sensitivity_html(sensitivity_results):
     <body>
         <div class="container">
             <h1>IRR Sensitivity Analysis — Key Levers</h1>
+            <p style="margin-bottom: 15px;">
+                <a href="financial_model.xlsx" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    ⬇️ Download Excel
+                </a>
+            </p>
             <p><strong>Target IRR:</strong> 20%</p>
     """
 
@@ -795,6 +810,11 @@ def generate_comparison_html(base_case, optimized_case, base_params, opt_params)
     <body>
         <div class="container">
             <h1>Base Case vs Optimized Scenario</h1>
+            <p style="margin-bottom: 20px;">
+                <a href="financial_model.xlsx" style="display: inline-block; padding: 10px 20px; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                    ⬇️ Download Excel
+                </a>
+            </p>
 
             <h2>Parameter Changes</h2>
             <table>
