@@ -89,7 +89,7 @@ def build_asset_schedule(params, deployment_schedule):
             num_deals = int(deployment_amount / params.avg_deal_size)
 
             for deal_idx in range(num_deals):
-                purchase_price = params.avg_deal_size / params.purchase_multiple
+                purchase_price = params.avg_deal_size  # $4M deal at 10x revenues
                 deal_costs = (
                     purchase_price * (
                         params.deal_cost_data_work +
