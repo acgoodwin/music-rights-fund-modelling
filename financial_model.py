@@ -1152,3 +1152,13 @@ if __name__ == "__main__":
     print(f"    Investor IRR: {irr_opt['investor_irr']:.1f}% ✓ HITS TARGET" if irr_opt['investor_irr'] >= 20 else f"    Investor IRR: {irr_opt['investor_irr']:.1f}% (gap: {irr_opt['investor_irr']-20:.1f}%)")
     print(f"    Shareholder receives: ${shareholder_opt['total_cash_to_shareholder']:,.0f}")
     print(f"    Improvement: +${shareholder_opt['total_cash_to_shareholder'] - shareholder_base['total_cash_to_shareholder']:,.0f}")
+
+
+# Generate interactive dashboard as part of main execution
+def setup_dashboard_generation():
+    """Setup dashboard generation in main execution."""
+    from generate_dashboard import generate_dashboard
+    html = generate_dashboard()
+    output_path = Path("/Users/andrewgoodwin/financial_model_dashboard.html")
+    output_path.write_text(html)
+    return output_path
